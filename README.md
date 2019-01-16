@@ -3,7 +3,7 @@ This is a sample project to demonstrate an issue with Robolectric and jetifier.
 Prerequisites for the problem:
 * Robolectric shadows 4.1
 * Android gradle plugin 3.3.0 (this project uses 3.2.1, so you have to modify it to reproduce the issue)
-* A unit test which uses a shadow on a `SwipeRefreshLayout`
+* A set of 2 unit tests which test `LocalBroadcastManager`. The tests assert that the `context` in the `BroadcastReceiver.onReceive()` method is the application context for the current test.
 
 Behavior:
 * Building the app is ok: `./gradlew clean assembleDebug` produces an apk with no errors.
@@ -92,22 +92,32 @@ Add the following to the root `gradle.properties`:
 android.jetifier.blacklist = shadows-supportv4-4.1.jar
 ```
 
-Then you get a compilation error:
+Then you get a test failure:
 ```
-./gradlew testDebugUnitTest
+$ ./gradlew testDebugUnitTest
 
 > Configure project :app
+WARNING: The option setting 'android.enableUnitTestBinaryResources=true' is experimental and unsupported.
+The current default is 'false'.
+
 WARNING: The option setting 'android.jetifier.blacklist=shadows-supportv4-4.1.jar' is experimental and unsupported.
 
 
-> Task :app:compileDebugUnitTestJavaWithJavac FAILED
-/Users/calvarez/dev/projects/RobolectricJetifierIssue/app/src/test/java/com/example/robolectric/jetifierissue/ExampleUnitTest.java:21: error: cannot access SwipeRefreshLayout
-        Shadows.shadowOf(swipeRefreshLayout);
-               ^
-  class file for android.support.v4.widget.SwipeRefreshLayout not found
-1 error
+> Task :app:compileDebugUnitTestJavaWithJavac
+Note: /Users/calvarez/dev/projects/RobolectricJetifierIssue/app/src/test/java/com/example/robolectric/jetifierissue/ExampleUnitTest.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:testDebugUnitTest FAILED
+
+com.example.robolectric.jetifierissue.ExampleUnitTest > testLocalBroadcastManager2 FAILED
+    java.lang.AssertionError at ExampleUnitTest.java:44
+
+2 tests completed, 1 failed
 ```
 
 Note that after trying to clean up this project, I no longer got the error about "The given artifact contains a string literal with a package reference 'android.support.v4.content' that cannot be safely rewritten", even after removing the `android.jetifier.blacklist = shadows-supportv4-4.1.jar` config. I don't understand what made it go away.
+But then, I still end up with failing test.
 
-But then, I still end up with the compilation error "cannot access SwipeRefreshLayout".
+If you set the gradle plugin back to 3.2.1:
+* You don't need the `android.jetifier.blacklist = shadows-supportv4-4.1.jar`
+* The tests pass
